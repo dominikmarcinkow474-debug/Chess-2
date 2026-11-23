@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: chess_companion
+      POSTGRES_USER: chess_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-password-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chess_user -d chess_companion"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://chess_user:${POSTGRES_PASSWORD:-local-dev-password-change-me}@db:5432/chess_companion
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-replace-this-secret-before-deploying}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_MINUTES: 30
+      STOCKFISH_PATH: stockfish
+      STOCKFISH_DEPTH: 14
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:
